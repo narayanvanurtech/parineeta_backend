@@ -1,23 +1,12 @@
 const Category = require("../models/Category");
 
-
-
 const findSubtitleById = (subtitles, id) => {
-  for (let subtitle of subtitles) {
-    if (subtitle._id.toString() === id) return subtitle;
-    if (subtitle.subtitles?.length) {
-      const found = findSubtitleById(subtitle.subtitles, id);
-      if (found) return found;
+  for (const subtitle of subtitles) {
+    if (subtitle._id.toString() === id.toString()) {
+      return subtitle;
     }
-  }
-  return null;
-};
-
-const findParentArrayById = (subtitles, id) => {
-  for (let subtitle of subtitles) {
-    if (subtitle._id.toString() === id) return subtitle.subtitles;
-    if (subtitle.subtitles?.length) {
-      const found = findParentArrayById(subtitle.subtitles, id);
+    if (subtitle.subtitles && subtitle.subtitles.length > 0) {
+      const found = findSubtitleById(subtitle.subtitles, id);
       if (found) return found;
     }
   }
@@ -30,28 +19,41 @@ const findParentArrayById = (subtitles, id) => {
 exports.addSubtitle = async (req, res) => {
   try {
     const { categoryId, parentSubtitleId, subtitle } = req.body;
-
-    if (!subtitle?.name) return res.status(400).json({ message: "Subtitle name required" });
+  
+    if (!subtitle || !subtitle.name) {
+      return res.status(400).json({ message: "Subtitle name required" });
+    }
 
     const category = await Category.findById(categoryId);
-    if (!category) return res.status(404).json({ message: "Category not found" });
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
 
-    // if parentSubtitleId is not provided, add at root level
-    if (!parentSubtitleId) {
-      category.subtitles.push({
-        name: subtitle.name,
-        description: subtitle.description || "",
-        subtitles: []
-      });
-    } else {
-      const parentArray = findParentArrayById(category.subtitles, parentSubtitleId);
-      if (!parentArray) return res.status(404).json({ message: "Parent subtitle not found" });
+    // subtitle object (ROOT categoryId ALWAYS)
+    const newSubtitle = {
+      name: subtitle.name,
+      description: subtitle.description || "",
+      categoryId: category._id,
+      subtitles: []
+    };
 
-      parentArray.push({
-        name: subtitle.name,
-        description: subtitle.description || "",
-        subtitles: []
-      });
+    const safeParentId =
+  parentSubtitleId && parentSubtitleId !== "" ? parentSubtitleId : null;
+    if (!safeParentId) {
+      category.subtitles.push(newSubtitle);
+    }
+ 
+    else {
+      const parentSubtitle = findSubtitleById(
+        category.subtitles,
+        parentSubtitleId
+      );
+
+      if (!parentSubtitle) {
+        return res.status(404).json({ message: "Parent subtitle not found" });
+      }
+
+      parentSubtitle.subtitles.push(newSubtitle);
     }
 
     await category.save();

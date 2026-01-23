@@ -1,20 +1,41 @@
 const mongoose = require("mongoose");
 
-const subtitleSchema = new mongoose.Schema({
-  name: { type: String, required: true, trim: true },
-  description: { type: String, default: "" },
-  subtitles: []
-});
+const SubtitleSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true
+    },
+    description: {
+      type: String,
+      default: ""
+    },
+    categoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      required: true
+    },
+    subtitles: [] // recursive
+  },
+  { _id: true }
+);
 
-// recursive
-subtitleSchema.add({
-  subtitles: [subtitleSchema]
-});
+// recursion
+SubtitleSchema.add({ subtitles: [SubtitleSchema] });
 
-const categorySchema = new mongoose.Schema({
-  name: { type: String, required: true, unique: true, trim: true },
-  description: { type: String, default: "" },
-  subtitles: [subtitleSchema]
-}, { timestamps: true });
+const CategorySchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true
+    },
+    description: {
+      type: String,
+      default: ""
+    },
+    subtitles: [SubtitleSchema]
+  },
+  { timestamps: true }
+);
 
-module.exports = mongoose.model("Category", categorySchema);
+module.exports = mongoose.model("Category", CategorySchema);
