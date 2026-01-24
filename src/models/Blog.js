@@ -8,19 +8,19 @@ const BlogSchema = new mongoose.Schema(
       trim: true
     },
     author: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
+      type:String,
+      required:true
     },
     category:{
         type:String,
         required:true
     },
     status:{
+      type:String,
         enum:["Published","Draft"],
         default:"Published",
     },
-    PublishDate:{
+    publishDate:{
         type:String,
         required:true
     },

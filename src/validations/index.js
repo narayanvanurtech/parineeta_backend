@@ -5,7 +5,8 @@ const cartValidation = require('./cartValidation');
 const categoryValidation = require('./categoryValidation');
 const orderValidation = require('./orderValidation');
 const userValidation = require('./userValidation');
-const wishlistValidation = require('./wishlistValidation'); // Add this line
+const wishlistValidation = require('./wishlistValidation'); 
+const blogValidation = require("./blogValidation");
 
 module.exports = {
   authValidation,
@@ -15,5 +16,6 @@ module.exports = {
   categoryValidation,
   orderValidation,
   userValidation,
-  wishlistValidation // Add this line
+  blogValidation,
+  wishlistValidation 
 };

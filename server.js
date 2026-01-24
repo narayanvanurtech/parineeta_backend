@@ -30,6 +30,7 @@ connectDB().then(() => {
     console.log(`   Cart:        http://localhost:${PORT}/api/cart`);
     console.log(`   Categories:  http://localhost:${PORT}/api/categories`);
     console.log(`   Subtitles:  http://localhost:${PORT}/api/subtitles`);
+    console.log(`   Blogs:  http://localhost:${PORT}'/api/blogs',`);
     console.log(`   Users:       http://localhost:${PORT}/api/users`);
     console.log(`   Address:     http://localhost:${PORT}/api/address`);
     console.log(`   Wishlist:    http://localhost:${PORT}/api/wishlist`);

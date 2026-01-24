@@ -12,7 +12,7 @@ app.use(cors({
   credentials: true
   
 }));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Request logging middleware
@@ -35,6 +35,7 @@ app.get('/', (req, res) => {
       cart: '/api/cart',
       categories: '/api/categories',
       subtitle:'/api/subtitles',
+      blogs:'/api/blogs',
       users: '/api/users',
       address: '/api/address',
       wishlist: '/api/wishlist',
@@ -83,6 +84,7 @@ app.use((req, res, next) => {
       '/api/cart',
       '/api/categories',
       '/api/subtitles',
+      '/api/blogs',
       '/api/users',
       '/api/address',
       '/api/wishlist',

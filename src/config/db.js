@@ -6,6 +6,7 @@ const Order = require('../models/Order');
 const Address = require('../models/Address');
 const Wishlist = require('../models/Wishlist');
 const Payment = require('../models/Payment');
+const Blogs = require('../models/Blog')
 
 
 module.exports = {
@@ -16,6 +17,7 @@ module.exports = {
   Order,
   Address,
   Wishlist,
-  Payment
+  Payment,
+  Blogs
 
 };

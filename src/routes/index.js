@@ -15,6 +15,8 @@ const addressRoutes = require('./address');
 const wishlistRoutes = require('./wishlist');
 const paymentRoutes = require('./payments');
 const adminRoutes = require('./admin');
+const blogRoutes = require("./blogs")
+
 
 console.log('✅ All route modules imported');
 
@@ -28,6 +30,7 @@ router.get('/admin-test', (req, res) => {
   });
 });
 
+
 // Mount all routes
 router.use('/auth', authRoutes);
 router.use('/products', productRoutes);
@@ -40,6 +43,7 @@ router.use('/address', addressRoutes);
 router.use('/wishlist', wishlistRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/admin', adminRoutes);
+router.use("/blogs",blogRoutes)
 
 console.log('🎉 All routes mounted successfully!');
 
