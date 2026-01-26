@@ -1,8 +1,45 @@
-const Product = require('../models/Product');
+
 const fs = require('fs');
 const path = require('path');
+const Product = require('../models/Product');
+const fileUpload = require('../services/multer');
+const { v4: uuid } = require("uuid");
 
-// Helper function to delete uploaded files
+
+exports.createProduct = async (req, res) => {
+  try {
+    const { name, description, category,price , stock, sizes,subcategory } = req.body;
+
+    if(!name || !description  || !category || !stock || !sizes || !price){
+      return res.status(501).json({message:"All Fields Are Required !",success:false})
+    }
+
+    const product = await Product.create({
+      name,
+      description,
+      category,
+      subcategory,
+      stock,
+      sizes,
+      price,
+      variants: [],
+      colors: [],
+    });
+    if(!product){
+      return res.status(401).json({message:"Failed to Create Product !",success:false})
+    }
+    
+    res.status(201).json({
+      message: "Product created",
+      product,
+      success:true
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
 const deleteUploadedFiles = (files) => {
   if (files && files.length > 0) {
     files.forEach(file => {
@@ -14,7 +51,7 @@ const deleteUploadedFiles = (files) => {
   }
 };
 
-// Get all products with filters
+
 exports.getAllProducts = async (req, res) => {
   try {
     const {
@@ -68,7 +105,7 @@ exports.getAllProducts = async (req, res) => {
   }
 };
 
-// Get product by ID
+
 exports.getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -87,276 +124,216 @@ exports.getProductById = async (req, res) => {
   }
 };
 
-// Create product with images (Admin only)
-exports.createProduct = async (req, res) => {
-  try {
-    const { name, description, price, category, stock, sizes, colors } = req.body;
 
-    console.log(name,description,price,category,stock,sizes,colors)
-    // Validate all required fields
-    const missingFields = {
-      name: !name,
-      price: !price,
-      category: !category,
-      stock: stock === undefined
-    };
 
-    const hasErrors = Object.values(missingFields).some(field => field === true);
 
-    if (hasErrors) {
-      // Delete uploaded files if validation fails
-      if (req.files) {
-        deleteUploadedFiles(req.files);
-      }
-      
-      return res.status(400).json({
-        error: 'All required fields must be provided',
-        missingFields,
-        requirements: {
-          name: 'String, required',
-          price: 'Number, required',
-          category: 'String, required',
-          stock: 'Number, required',
-          sizes: 'Array of strings (optional)',
-          colors: 'Array of strings (optional)',
-          images: 'Files (optional, max 10)'
-        }
-      });
-    }
-
-    // Parse sizes and colors if they are strings
-    let parsedSizes = sizes;
-    let parsedColors = colors;
-
-    if (typeof sizes === 'string') {
-      try {
-        parsedSizes = JSON.parse(sizes);
-      } catch (e) {
-        parsedSizes = sizes.split(',').map(s => s.trim());
-      }
-    }
-
-    if (typeof colors === 'string') {
-      try {
-        parsedColors = JSON.parse(colors);
-      } catch (e) {
-        parsedColors = colors.split(',').map(c => c.trim());
-      }
-    }
-
-    // Validate sizes if provided
-    if (parsedSizes && Array.isArray(parsedSizes) && parsedSizes.length > 0) {
-      const validSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-      const invalidSizes = parsedSizes.filter(size => !validSizes.includes(size.toUpperCase()));
-      if (invalidSizes.length > 0) {
-        if (req.files) {
-          deleteUploadedFiles(req.files);
-        }
-        return res.status(400).json({
-          error: 'Invalid sizes found',
-          validSizes,
-          invalidSizes,
-        });
-      }
-    }
-
-    // Get image paths from uploaded files
-    const imagePaths = req.files ? req.files.map(file => `/${file.path.replace(/\\/g, '/')}`) : [];
-
-    const product = new Product({
-      name,
-      description: description || '',
-      price: Number(price),
-      category,
-      stock: Number(stock),
-      sizes: parsedSizes && Array.isArray(parsedSizes) ? parsedSizes.map(size => size.toUpperCase()) : [],
-      colors: parsedColors && Array.isArray(parsedColors) ? parsedColors.map(color => color.toLowerCase()) : [],
-      images: imagePaths
-    });
-
-    await product.save();
-
-    res.status(201).json({
-      message: 'Product created successfully',
-      product,
-      uploadedImages: imagePaths.length
-    });
-  } catch (error) {
-    console.error('Create Product Error:', error);
-    
-    // Delete uploaded files if product creation fails
-    if (req.files) {
-      deleteUploadedFiles(req.files);
-    }
-  
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({
-        error: 'Validation Error',
-        details: Object.values(error.errors).map(err => ({
-          field: err.path,
-          message: err.message
-        }))
-      });
-    }
-    res.status(500).json({ 
-      error: 'Failed to create product',
-      details: error.message 
-    });
-  }
-};
-
-// Update product with images (Admin only)
 exports.updateProduct = async (req, res) => {
   try {
-    const { name, description, price, category, stock, sizes, colors, removeImages } = req.body;
+    const { name, description, category, subcategory, price, stock, sizes } = req.body;
 
-    const product = await Product.findById(req.params.id);
-    
-    if (!product) {
-      // Delete uploaded files if product not found
-      if (req.files) {
-        deleteUploadedFiles(req.files);
-      }
-      return res.status(404).json({ error: 'Product not found' });
-    }
-
-    // Parse sizes and colors if they are strings
-    let parsedSizes = sizes;
-    let parsedColors = colors;
-
-    if (typeof sizes === 'string' && sizes) {
-      try {
-        parsedSizes = JSON.parse(sizes);
-      } catch (e) {
-        parsedSizes = sizes.split(',').map(s => s.trim());
-      }
-    }
-
-    if (typeof colors === 'string' && colors) {
-      try {
-        parsedColors = JSON.parse(colors);
-      } catch (e) {
-        parsedColors = colors.split(',').map(c => c.trim());
-      }
-    }
-
-    // Validate sizes if provided
-    if (parsedSizes && Array.isArray(parsedSizes) && parsedSizes.length > 0) {
-      const validSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-      const uniqueSizes = [...new Set(parsedSizes.map(size => size.toUpperCase()))];
-      const invalidSizes = uniqueSizes.filter(size => !validSizes.includes(size));
-      if (invalidSizes.length > 0) {
-        if (req.files) {
-          deleteUploadedFiles(req.files);
-        }
-        return res.status(400).json({
-          error: 'Invalid sizes found',
-          validSizes,
-          invalidSizes,
-        });
-      }
-    }
-
-    // Handle image removal
-    if (removeImages) {
-      let imagesToRemove = [];
-      try {
-        imagesToRemove = typeof removeImages === 'string' ? JSON.parse(removeImages) : removeImages;
-      } catch (e) {
-        imagesToRemove = typeof removeImages === 'string' ? removeImages.split(',') : [];
-      }
-
-      if (Array.isArray(imagesToRemove) && imagesToRemove.length > 0) {
-        // Delete files from filesystem
-        imagesToRemove.forEach(imagePath => {
-          const fullPath = path.join(__dirname, '../../', imagePath.replace(/^\//, ''));
-          if (fs.existsSync(fullPath)) {
-            fs.unlinkSync(fullPath);
-          }
-        });
-        // Remove from product images array
-        product.images = product.images.filter(img => !imagesToRemove.includes(img));
-      }
-    }
-
-    // Add new images
-    if (req.files && req.files.length > 0) {
-      const newImagePaths = req.files.map(file => `/${file.path.replace(/\\/g, '/')}`);
-      product.images = [...product.images, ...newImagePaths];
-      
-      // Limit to 10 images
-      if (product.images.length > 10) {
-        // Delete excess uploaded files
-        const excessFiles = req.files.slice(10 - (product.images.length - req.files.length));
-        deleteUploadedFiles(excessFiles);
-        product.images = product.images.slice(0, 10);
-      }
-    }
-
-    // Update other fields
-    if (name) product.name = name;
-    if (description !== undefined) product.description = description;
-    if (price) product.price = Number(price);
-    if (category) product.category = category;
-    if (stock !== undefined) product.stock = Number(stock);
-    if (parsedSizes && Array.isArray(parsedSizes)) {
-      product.sizes = [...new Set(parsedSizes.map(size => size.toUpperCase()))];
-    }
-    if (parsedColors && Array.isArray(parsedColors)) {
-      product.colors = [...new Set(parsedColors.map(color => color.toLowerCase()))];
-    }
-    product.updatedAt = new Date();
-
-    await product.save();
-
-    res.json({
-      message: 'Product updated successfully',
-      product,
-      totalImages: product.images.length
-    });
-  } catch (error) {
-    console.error('Update Product Error:', error);
-    
-    // Delete uploaded files if update fails
-    if (req.files) {
-      deleteUploadedFiles(req.files);
-    }
-    
-    res.status(500).json({ error: 'Failed to update product' });
-  }
-};
-
-// Delete product (Admin only)
-exports.deleteProduct = async (req, res) => {
-  try {
     const product = await Product.findById(req.params.id);
 
     if (!product) {
-      return res.status(404).json({ error: 'Product not found' });
-    }
-
-    // Delete associated images from filesystem
-    if (product.images && product.images.length > 0) {
-      product.images.forEach(imagePath => {
-        const fullPath = path.join(__dirname, '../../', imagePath.replace(/^\//, ''));
-        if (fs.existsSync(fullPath)) {
-          fs.unlinkSync(fullPath);
-        }
+      return res.status(404).json({
+        message: "Product not found",
+        success: false,
       });
     }
 
-    await Product.findByIdAndDelete(req.params.id);
+    if (name !== undefined) product.name = name;
+    if (description !== undefined) product.description = description;
+    if (category !== undefined) product.category = category;
+    if (subcategory !== undefined) product.subcategory = subcategory;
+    if (price !== undefined) product.price = Number(price);
+    if (stock !== undefined) product.stock = Number(stock);
 
-    res.json({
+   
+    if (sizes !== undefined) {
+      let parsedSizes = sizes;
+
+      if (typeof sizes === "string") {
+        try {
+          parsedSizes = JSON.parse(sizes);
+        } catch {
+          parsedSizes = sizes.split(",").map(s => s.trim());
+        }
+      }
+
+      product.sizes = parsedSizes;
+    }
+
+
+    product.updatedAt = new Date();
+    await product.save();
+
+    res.status(200).json({
+      message: "Product updated successfully",
+      product,
+      success: true,
+    });
+  } catch (error) {
+    console.error("Update Product Error:", error);
+    res.status(500).json({
+      message: "Failed to update product",
+      success: false,
+    });
+  }
+};
+
+
+exports.deleteProduct = async (req, res) => {
+ const {id} = req.params
+  try {
+   
+    if(!id){
+      return res.status(401).json({message:'Id is not Found !',success:false})
+    }
+
+const product  = await Product.findByIdAndDelete(id);
+
+    res.status(201).json({
       message: 'Product deleted successfully',
       deletedProduct: {
         id: product._id,
         name: product.name,
-        imagesDeleted: product.images.length
-      }
+      },
+      success:true
     });
   } catch (error) {
     console.error('Delete Product Error:', error);
-    res.status(500).json({ error: 'Failed to delete product' });
+    res.status(500).json({ message: 'Failed to delete product',success:false });
   }
 };
+
+
+//Add Variant 
+
+exports.addvariant = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { color, stock, price } = req.body;
+
+    const product = await Product.findById(productId);
+    if (!product) return res.status(404).json({ error: "Product not found" });
+
+    const newColor = color.toLowerCase();
+
+    // Check if this color already exists in variants
+    const colorExists = product.variants.some(
+      (v) => v.color.toLowerCase() === newColor
+    );
+
+    if (colorExists) {
+      return res.status(400).json({
+        error: `Variant with color "${newColor}" already exists`,
+      });
+    }
+
+    // Get images from multer fields
+    const imageFiles = req.files.images || [];
+
+    // Upload images
+    const imageResults = await Promise.all(
+      imageFiles.map((file) =>
+        fileUpload(file.buffer.toString("base64"), uuid())
+      )
+    );
+
+    const variant = {
+      color: newColor,
+      stock: Number(stock),
+      price: price ? Number(price) : undefined,
+      images: imageResults.map((img) => img.url),
+    };
+
+    product.variants.push(variant);
+
+    // Sync colors array
+    product.colors = [...new Set(product.variants.map((v) => v.color))];
+
+    await product.save();
+
+    res.status(201).json({
+      message: "Variant added successfully",
+      variant: variant,
+    });
+  } catch (error) {
+    console.error("Add Variant Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.updateVariant = async (req, res) => {
+  try {
+    const { productId, variantId } = req.params;
+    const { color, stock, price } = req.body;
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    const variant = product.variants.id(variantId);
+    if (!variant) {
+      return res.status(404).json({ error: "Variant not found" });
+    }
+
+    /* ---------- COLOR UPDATE (duplicate check) ---------- */
+    if (color) {
+      const newColor = color.toLowerCase().trim();
+
+      const colorExists = product.variants.some(
+        (v) =>
+          v._id.toString() !== variantId &&
+          v.color.toLowerCase() === newColor
+      );
+
+      if (colorExists) {
+        return res.status(400).json({
+          error: `Variant with color "${newColor}" already exists`,
+        });
+      }
+
+      variant.color = newColor;
+    }
+
+    /* ---------- STOCK & PRICE ---------- */
+    if (stock !== undefined) variant.stock = Number(stock);
+    if (price !== undefined) variant.price = Number(price);
+
+    /* ---------- IMAGE UPDATE (APPEND old + new) ---------- */
+    if (req.files && req.files.images && req.files.images.length > 0) {
+      const imageFiles = req.files.images;
+
+      const uploadedImages = await Promise.all(
+        imageFiles.map((file) =>
+          fileUpload(file.buffer.toString("base64"), uuid())
+        )
+      );
+
+      const newImageUrls = uploadedImages.map((img) => img.url);
+
+      // ✅ APPEND images (old + new)
+      variant.images = [...variant.images, ...newImageUrls];
+    }
+
+    /* ---------- UPDATE PRODUCT COLORS ---------- */
+    product.colors = [
+      ...new Set(product.variants.map((v) => v.color)),
+    ];
+
+    await product.save();
+
+    res.status(200).json({
+      message: "Variant updated successfully",
+      variant,
+    });
+  } catch (error) {
+    console.error("Update Variant Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+
+

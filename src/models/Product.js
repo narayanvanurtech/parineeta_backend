@@ -1,61 +1,53 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const productSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  description: {
-    type: String,
-    default: ''
-  },
-  price: {
-    type: Number,
-    required: true,
-    min: 0
-  },
-  category: {
-    type: String,
-    required: true
-  },
-  stock: {
-    type: Number,
-    required: true,
-    min: 0,
-    default: 0
-  },
-  sizes: {
-    type: [String],
-    enum: {
-      values: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-      message: '{VALUE} is not a valid size'
+const variantSchema = new mongoose.Schema(
+  {
+    color: {
+      type: String,
+      required: true,
+      lowercase: true,
+      trim: true,
     },
-    required: true,
-    validate: {
-      validator: function(v) {
-        return v && v.length > 0;
-      },
-      message: 'At least one size must be specified'
-    }
-  },
-  colors: {
-    type: [String],
-    required: true,
-    validate: {
-      validator: function(v) {
-        return v && v.length > 0;
-      },
-      message: 'At least one color must be specified'
-    }
-  },
+    stock: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    price: {
+      type: Number, 
+    },
     images: {
-    type: [String],
-    default: []
-  }
-}, {
-  timestamps: true
-});
+      type: [String], 
+      default: [],
+    },
+  },
+  { _id: true } 
+);
 
+const productSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    description: String,
+    category: { type: String, required: true },
+    subcategory: { type: String,default:"" },
+    stock: { type: Number, required: true }, 
+    sizes: [String],
 
-module.exports = mongoose.model('Product', productSchema);
+    colors: {
+      type: [String], 
+      default: [],
+    },
+
+    price: {
+      type: Number, 
+    },
+    variants: {
+      type: [variantSchema],
+      default: [],
+    },
+     totalPrice: { type: Number,default:0 },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("Product", productSchema);
