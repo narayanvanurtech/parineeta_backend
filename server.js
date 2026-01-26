@@ -31,6 +31,7 @@ connectDB().then(() => {
     console.log(`   Categories:  http://localhost:${PORT}/api/categories`);
     console.log(`   Subtitles:  http://localhost:${PORT}/api/subtitles`);
     console.log(`   Blogs:  http://localhost:${PORT}'/api/blogs',`);
+    console.log(`   Ziba:  http://localhost:${PORT}'/api/ziba',`);
     console.log(`   Users:       http://localhost:${PORT}/api/users`);
     console.log(`   Address:     http://localhost:${PORT}/api/address`);
     console.log(`   Wishlist:    http://localhost:${PORT}/api/wishlist`);

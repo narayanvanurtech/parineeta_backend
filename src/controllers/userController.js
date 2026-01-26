@@ -117,12 +117,17 @@ exports.updateUser = async (req, res) => {
     const { firstName, lastName, email, role ,phone} = req.body;
     const userId = req.params.id;
 
+  
+
     if (!firstName || !lastName || !email) {
       return res.status(400).json({
         error: "First name, last name and email are required",
       });
     }
 
+    if(phone.length!=10){
+      return res.status(401).json({error:"Phone No Length Should be Ten"})
+    }
     // Check email conflict
     const existingUser = await User.findOne({
       email: email.toLowerCase().trim(),

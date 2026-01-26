@@ -53,6 +53,10 @@ const createAddress = async (req, res) => {
       });
     }
 
+    if(phone.length!==10){
+      return res.status(400).json({error:"Phone No length should be Ten"})
+    }
+
     // Check if user has any addresses
     const existingAddressCount = await Address.countDocuments({ userId });
     

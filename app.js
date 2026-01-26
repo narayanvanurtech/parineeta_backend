@@ -38,6 +38,7 @@ app.get('/', (req, res) => {
       blogs:'/api/blogs',
       users: '/api/users',
       address: '/api/address',
+      ziba:'/api/ziba',
       wishlist: '/api/wishlist',
       payments: '/api/payments' 
     },
@@ -85,6 +86,7 @@ app.use((req, res, next) => {
       '/api/categories',
       '/api/subtitles',
       '/api/blogs',
+      '/api/ziba',
       '/api/users',
       '/api/address',
       '/api/wishlist',

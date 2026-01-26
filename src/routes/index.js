@@ -16,6 +16,7 @@ const wishlistRoutes = require('./wishlist');
 const paymentRoutes = require('./payments');
 const adminRoutes = require('./admin');
 const blogRoutes = require("./blogs")
+const zibaRoutes = require("./ziba")
 
 
 console.log('✅ All route modules imported');
@@ -44,6 +45,7 @@ router.use('/wishlist', wishlistRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/admin', adminRoutes);
 router.use("/blogs",blogRoutes)
+router.use("/ziba",zibaRoutes)
 
 console.log('🎉 All routes mounted successfully!');
 

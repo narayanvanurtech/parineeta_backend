@@ -78,6 +78,10 @@ exports.register = async (req, res) => {
         error: 'First name, last name, email and password are required'
       });
     }
+
+    if(phone.length!=10){
+      return res.stats(401).json({error:"Phone No Length Should be Ten"})
+    }
     
     const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
     if (existingUser) {
@@ -164,6 +168,10 @@ exports.updateProfile = async (req, res) => {
   try {
     const userId = req.user._id;
     const { firstName, lastName, phone, address } = req.body;
+
+    if(phone.length!=10){
+      return res.stats(401).json({error:"Phone No Length Should be Ten"})
+    }
 
     const updateData = {};
     if (firstName) updateData.firstName = firstName;

@@ -14,6 +14,7 @@ exports.getCart = async (req, res) => {
     
     const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
     
+    
     res.json({
       message: 'Cart retrieved successfully',
       cart: cartItems.map(item => ({
