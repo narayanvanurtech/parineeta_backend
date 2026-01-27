@@ -30,4 +30,8 @@ router.put(
   upload.fields([{ name: "images" }]),
   productController.updateVariant
 );
+router.delete(
+  "/:productId/variants/:variantId",
+  productController.deleteVariant
+);
 module.exports = router;

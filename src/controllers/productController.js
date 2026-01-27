@@ -263,10 +263,11 @@ exports.addvariant = async (req, res) => {
   }
 };
 
+
 exports.updateVariant = async (req, res) => {
   try {
     const { productId, variantId } = req.params;
-    const { color, stock, price } = req.body;
+    const { color, stock, price, removedImages } = req.body;
 
     const product = await Product.findById(productId);
     if (!product) {
@@ -278,7 +279,7 @@ exports.updateVariant = async (req, res) => {
       return res.status(404).json({ error: "Variant not found" });
     }
 
-    /* ---------- COLOR UPDATE (duplicate check) ---------- */
+    
     if (color) {
       const newColor = color.toLowerCase().trim();
 
@@ -297,27 +298,34 @@ exports.updateVariant = async (req, res) => {
       variant.color = newColor;
     }
 
-    /* ---------- STOCK & PRICE ---------- */
+   
     if (stock !== undefined) variant.stock = Number(stock);
     if (price !== undefined) variant.price = Number(price);
 
-    /* ---------- IMAGE UPDATE (APPEND old + new) ---------- */
-    if (req.files && req.files.images && req.files.images.length > 0) {
-      const imageFiles = req.files.images;
+ 
+    if (removedImages) {
+      const removed = Array.isArray(removedImages)
+        ? removedImages
+        : [removedImages];
 
+      variant.images = variant.images.filter(
+        (img) => !removed.includes(img)
+      );
+    }
+
+    if (req.files?.images?.length) {
       const uploadedImages = await Promise.all(
-        imageFiles.map((file) =>
+        req.files.images.map((file) =>
           fileUpload(file.buffer.toString("base64"), uuid())
         )
       );
 
-      const newImageUrls = uploadedImages.map((img) => img.url);
+      const newUrls = uploadedImages.map((img) => img.url);
 
-      // ✅ APPEND images (old + new)
-      variant.images = [...variant.images, ...newImageUrls];
+      variant.images.push(...newUrls);
     }
 
-    /* ---------- UPDATE PRODUCT COLORS ---------- */
+   
     product.colors = [
       ...new Set(product.variants.map((v) => v.color)),
     ];
@@ -335,5 +343,45 @@ exports.updateVariant = async (req, res) => {
 };
 
 
+
+
+exports.deleteVariant = async (req, res) => {
+  try {
+    const { productId, variantId } = req.params;
+
+    if (!productId || !variantId) {
+      return res.status(400).json({
+        success: false,
+        message: "Product ID and Variant ID are required",
+      });
+    }
+
+    const product = await Product.findByIdAndUpdate(
+      productId,
+      {
+        $pull: { variants: { _id: variantId } },
+      },
+      { new: true }
+    );
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Variant deleted successfully",
+    });
+  } catch (error) {
+    console.error("DELETE VARIANT ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete variant",
+    });
+  }
+};
 
 
