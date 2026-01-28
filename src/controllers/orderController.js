@@ -44,61 +44,39 @@ exports.getOrderById = async (req, res) => {
 exports.createOrder = async (req, res) => {
   try {
     const userId = req.user._id;
-    const { shippingAddress } = req.body;
+    const { shippingAddress, cartItemIds } = req.body;
 
-    // Validate required fields
     if (!shippingAddress) {
-      return res.status(400).json({ 
-        error: 'Shipping address ID is required'
+      return res.status(400).json({
+        error: "Shipping address is required",
       });
     }
 
-    // Verify the address exists and belongs to the user
     const address = await Address.findOne({
       _id: shippingAddress,
-      userId: userId
+      userId,
     });
 
     if (!address) {
       return res.status(404).json({
-        error: 'Address not found',
-        details: 'The specified shipping address does not exist or does not belong to you'
+        error: "Address not found",
       });
     }
 
-    // Check cart items
     let cartItems;
-    const { cartItemIds } = req.body; // Allow specific cart items to be ordered
-
     if (cartItemIds && Array.isArray(cartItemIds)) {
       cartItems = await Cart.find({
         userId,
-        _id: { $in: cartItemIds }
-      }).populate('productId');
-
-      console.log('Requested cart items:', cartItemIds);
-      console.log('Found cart items:', cartItems.map(item => item._id));
-
-      if (cartItems.length !== cartItemIds.length) {
-        const foundIds = cartItems.map(item => item._id.toString());
-        const missingIds = cartItemIds.filter(id => !foundIds.includes(id));
-        
-        return res.status(400).json({ 
-          error: 'One or more selected cart items were not found',
-          details: {
-            requestedIds: cartItemIds,
-            foundIds: foundIds,
-            missingIds: missingIds,
-            userId: userId
-          }
-        });
-      }
+        _id: { $in: cartItemIds },
+      }).populate("productId");
     } else {
-      cartItems = await Cart.find({ userId }).populate('productId');
+      cartItems = await Cart.find({ userId }).populate("productId");
     }
-    
+
     if (!cartItems || cartItems.length === 0) {
-      return res.status(400).json({ error: 'No items selected for order' });
+      return res.status(400).json({
+        error: "No items selected for order",
+      });
     }
 
     const orderItems = [];
@@ -106,103 +84,144 @@ exports.createOrder = async (req, res) => {
 
     for (const cartItem of cartItems) {
       const product = cartItem.productId;
-      
-      // Check if product still exists
+
       if (!product) {
         return res.status(400).json({
-          error: 'Some products in your cart are no longer available',
-          item: cartItem
+          error: "Product no longer exists",
         });
       }
 
-      // Check if product has sufficient stock
-      if (product.stock < cartItem.quantity) {
+      const variant = product.variants.id(cartItem.variantId);
+
+      if (!variant) {
         return res.status(400).json({
-          error: 'Insufficient stock',
+          error: "Variant not found",
           product: product.name,
-          requested: cartItem.quantity,
-          available: product.stock
         });
       }
+
+      if (variant.stock < cartItem.quantity) {
+        return res.status(400).json({
+          error: "Insufficient stock",
+          product: product.name,
+          color: variant.color,
+          available: variant.stock,
+          requested: cartItem.quantity,
+        });
+      }
+
+      const subtotal = variant.price * cartItem.quantity;
+      total += subtotal;
 
       orderItems.push({
         productId: product._id,
+        variantId: variant._id,
         name: product.name,
-        price: product.price,
+        color: variant.color,
+        price: variant.price,
         quantity: cartItem.quantity,
-        image: product.images && product.images.length > 0 ? product.images[0] : ''
+        image: variant.images?.[0] || "",
+        subtotal,
       });
 
-      total += product.price * cartItem.quantity;
-
-      // Update product stock
-      await Product.findByIdAndUpdate(product._id, {
-        $inc: { stock: -cartItem.quantity }
-      });
+      await Product.updateOne(
+        { _id: product._id, "variants._id": variant._id },
+        { $inc: { "variants.$.stock": -cartItem.quantity } }
+      );
     }
+
+    // 🔹 Generate custom orderId / tracking number
+    const timestamp = Date.now().toString(36);
+    const randomPart = Math.random().toString(36).substring(2, 5);
+    const orderId = `parineeta-${timestamp}-${randomPart}`;
 
     const order = new Order({
       userId,
       items: orderItems,
-      total: parseFloat(total.toFixed(2)),
+      total: Number(total.toFixed(2)),
       shippingAddress,
-      paymentMethod: 'COD', // Default to Cash on Delivery
-      status: 'pending',
+      paymentMethod: "COD",
+      status: "pending",
       orderDate: new Date(),
-      trackingNumber: Math.random().toString(36).substring(7).toUpperCase()
+      trackingNumber: orderId, // ✅ use custom ID
     });
 
     await order.save();
-    
-    // Only delete the cart items that were ordered
+
     if (cartItemIds && Array.isArray(cartItemIds)) {
-      await Cart.deleteMany({ _id: { $in: cartItemIds }, userId });
+      await Cart.deleteMany({ userId, _id: { $in: cartItemIds } });
     } else {
-      // If no specific items provided, clear entire cart
       await Cart.deleteMany({ userId });
     }
 
     res.status(201).json({
-      message: 'Order created successfully',
-      order: {
-        _id: order._id,
-        items: order.items,
-        total: order.total,
-        shippingAddress: order.shippingAddress,
-        paymentMethod: order.paymentMethod,
-        status: order.status,
-        trackingNumber: order.trackingNumber,
-        orderDate: order.orderDate
-      }
+      message: "Order created successfully",
+      order,
     });
   } catch (error) {
-    console.error('Create Order Error:', error);
-    res.status(500).json({ 
-      error: 'Failed to create order',
+    console.error("Create Order Error:", error);
+    res.status(500).json({
+      error: "Failed to create order",
       details: error.message,
-      type: error.name
     });
   }
 };
+
+
 
 // Get all orders (Admin only)
 exports.getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find({})
-      .populate('userId', 'name email')
-      .populate('items.productId', 'name price')
+      .populate("userId", "name email")
+      .populate("items.productId", "name category subcategory")
       .sort({ createdAt: -1 });
 
+    const formattedOrders = orders.map((order) => ({
+      _id: order._id,
+      user: {
+        _id: order.userId?._id,
+        name: order.userId?.name,
+        email: order.userId?.email,
+      },
+      items: order.items.map((item) => ({
+        product: {
+          _id: item.productId?._id,
+          name: item.productId?.name,
+          category: item.productId?.category,
+          subcategory: item.productId?.subcategory,
+        },
+        variant: {
+          _id: item.variantId,
+          color: item.color,
+          price: item.price,
+          image: item.image,
+        },
+        quantity: item.quantity,
+        subtotal: item.subtotal,
+      })),
+      total: order.total,
+      paymentMethod: order.paymentMethod,
+      status: order.status,
+      trackingNumber: order.trackingNumber,
+      shippingAddress: order.shippingAddress,
+      orderDate: order.orderDate,
+      createdAt: order.createdAt,
+    }));
+
     res.json({
-      message: 'Orders retrieved successfully',
-      orders,
-      total: orders.length
+      message: "Orders retrieved successfully",
+      totalOrders: formattedOrders.length,
+      orders: formattedOrders,
     });
   } catch (error) {
-    console.error('Get All Orders Error:', error);
-    res.status(500).json({ error: 'Failed to retrieve orders' });
+    console.error("Get All Orders Error:", error);
+    res.status(500).json({
+      error: "Failed to retrieve orders",
+    });
   }
 };
+
 
 // Update order status (Admin only)
 exports.updateOrderStatus = async (req, res) => {

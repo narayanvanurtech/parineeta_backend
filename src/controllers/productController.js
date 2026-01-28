@@ -279,7 +279,7 @@ exports.updateVariant = async (req, res) => {
       return res.status(404).json({ error: "Variant not found" });
     }
 
-    
+   
     if (color) {
       const newColor = color.toLowerCase().trim();
 
