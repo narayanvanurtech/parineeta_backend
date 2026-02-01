@@ -15,6 +15,14 @@ const cartSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     required: true,
   },
+  size: {
+      _id: { type: mongoose.Schema.Types.ObjectId },
+      size: { type: String },
+      price: { type: Number },
+      discount: { type: Number },
+      finalPrice: { type: Number },
+      stock: { type: Number },
+    },
   quantity: {
     type: Number,
     required: true,

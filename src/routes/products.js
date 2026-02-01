@@ -16,6 +16,8 @@ const upload = multer({
 // Public routes
 router.get("/", productController.getAllProducts);
 router.get("/:id", productController.getProductById);
+router.get("/:productId/:variantId",productController.getProductWithVariant)
+
 
 // Admin routes
 router.post("/", auth, admin.adminMiddleware, productController.createProduct);
@@ -24,7 +26,7 @@ router.delete("/:id", auth, admin.adminMiddleware, productController.deleteProdu
 
 
 //Add Variant
-router.post("/:productId/variants",auth,admin.adminMiddleware,upload.fields([{ name: "images", maxCount: 6 }]),productController.addvariant)
+router.post("/:productId/variants",auth,admin.adminMiddleware,upload.fields([{ name: "images", maxCount: 6 }]),productController.addVariant)
 router.put(
   "/:productId/variants/:variantId",
   upload.fields([{ name: "images" }]),
@@ -34,4 +36,10 @@ router.delete(
   "/:productId/variants/:variantId",
   productController.deleteVariant
 );
+
+
+//Add Size
+router.post("/:productId/:variantId",auth,productController.addSizeToVariant)
+
+
 module.exports = router;
