@@ -4,7 +4,8 @@ const addZiba = async (req, res) => {
   try {
     const { fullname, email, subject, message } = req.body;
 
-    // Validation
+    console.log(fullname,email,subject,message)
+
     if (!fullname || !email || !subject || !message) {
       return res.status(400).json({
         success: false,
@@ -12,8 +13,8 @@ const addZiba = async (req, res) => {
       });
     }
 
-    // ✅ Validate subject exists
     const subjectDoc = await Subject.findById(subject);
+    console.log(subjectDoc)
     if (!subjectDoc) {
       return res.status(404).json({
         success: false,
@@ -21,7 +22,6 @@ const addZiba = async (req, res) => {
       });
     }
 
-    // ✅ Create Ziba
     const zibaCreate = await Ziba.create({
       fullname,
       email,
@@ -29,7 +29,7 @@ const addZiba = async (req, res) => {
       message,
     });
 
-    // ✅ Populate subject
+    
     const ziba = await Ziba.findById(zibaCreate._id).populate(
       "subject",
       "name"

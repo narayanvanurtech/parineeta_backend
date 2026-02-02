@@ -6,7 +6,7 @@ const admin = require("../middleware/admin")
 
 
 //Ziva Customer
-router.post("/",admin.adminMiddleware,zibaController.addZiba)
+router.post("/",zibaController.addZiba)
 router.get("/",zibaController.getAllZivacustomer)
 router.delete("/:id", admin.adminMiddleware,zibaController.deletZivaCustomer)
 router.put("/:id",admin.adminMiddleware,zibaController.updateZivaCustomer)
