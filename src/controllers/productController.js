@@ -6,8 +6,9 @@ const { v4: uuid } = require("uuid");
 
 exports.createProduct = async (req, res) => {
   try {
-    const { name, description, category, subcategory } = req.body;
+    const { name, description, category, subcategory, coreCategory } = req.body;
 
+    console.log(coreCategory);
     if (!name || !category) {
       return res.status(400).json({
         success: false,
@@ -20,8 +21,10 @@ exports.createProduct = async (req, res) => {
       description,
       category,
       subcategory,
+      coreCategory,
       variants: [],
     });
+    console.log("Product Created ", product);
 
     res.status(201).json({
       success: true,
@@ -32,8 +35,6 @@ exports.createProduct = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
-
 
 const deleteUploadedFiles = (files) => {
   if (files && files.length > 0) {
@@ -48,13 +49,26 @@ const deleteUploadedFiles = (files) => {
 
 exports.getAllProducts = async (req, res) => {
   try {
-    const { color, size, category } = req.query;
+    const { color, size, category, coreCategory } = req.query;
 
     const filter = {};
 
-    if (category) filter.category = category;
-    if (color) filter.colors = color.toLowerCase();
+    // ✅ category
+    if (category) {
+      filter.category = category;
+    }
 
+    // ✅ coreCategory
+    if (coreCategory) {
+      filter.coreCategory = coreCategory;
+    }
+
+    // ✅ color
+    if (color) {
+      filter.colors = color.toLowerCase();
+    }
+
+    // ✅ size (nested variant filter)
     if (size) {
       filter["variants.sizes.size"] = size.toUpperCase();
     }
@@ -70,8 +84,6 @@ exports.getAllProducts = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
-
 
 exports.getProductById = async (req, res) => {
   try {
@@ -93,7 +105,7 @@ exports.getProductById = async (req, res) => {
 
 exports.updateProduct = async (req, res) => {
   try {
-    const { name, description, category, subcategory } = req.body;
+    const { name, description, category, subcategory, coreCategory } = req.body;
 
     const product = await Product.findById(req.params.id);
     if (!product) {
@@ -107,7 +119,7 @@ exports.updateProduct = async (req, res) => {
     if (description !== undefined) product.description = description;
     if (category !== undefined) product.category = category;
     if (subcategory !== undefined) product.subcategory = subcategory;
-
+    if (coreCategory !== undefined) product.coreCategory = coreCategory;
     await product.save();
 
     res.status(200).json({
@@ -122,7 +134,6 @@ exports.updateProduct = async (req, res) => {
     });
   }
 };
-
 
 exports.deleteProduct = async (req, res) => {
   const { id } = req.params;
@@ -163,9 +174,7 @@ exports.addVariant = async (req, res) => {
 
     const normalizedColor = color.toLowerCase().trim();
 
-    const exists = product.variants.some(
-      (v) => v.color === normalizedColor
-    );
+    const exists = product.variants.some((v) => v.color === normalizedColor);
 
     if (exists) {
       return res.status(400).json({
@@ -175,9 +184,7 @@ exports.addVariant = async (req, res) => {
 
     const images = req.files?.images || [];
     const uploaded = await Promise.all(
-      images.map((file) =>
-        fileUpload(file.buffer.toString("base64"), uuid())
-      )
+      images.map((file) => fileUpload(file.buffer.toString("base64"), uuid())),
     );
 
     product.variants.push({
@@ -198,7 +205,6 @@ exports.addVariant = async (req, res) => {
   }
 };
 
-
 exports.updateVariant = async (req, res) => {
   try {
     const { productId, variantId } = req.params;
@@ -214,7 +220,7 @@ exports.updateVariant = async (req, res) => {
       const newColor = color.toLowerCase().trim();
 
       const exists = product.variants.some(
-        (v) => v._id.toString() !== variantId && v.color === newColor
+        (v) => v._id.toString() !== variantId && v.color === newColor,
       );
 
       if (exists) {
@@ -231,16 +237,14 @@ exports.updateVariant = async (req, res) => {
         ? removedImages
         : [removedImages];
 
-      variant.images = variant.images.filter(
-        (img) => !removed.includes(img)
-      );
+      variant.images = variant.images.filter((img) => !removed.includes(img));
     }
 
     if (req.files?.images?.length) {
       const uploaded = await Promise.all(
         req.files.images.map((file) =>
-          fileUpload(file.buffer.toString("base64"), uuid())
-        )
+          fileUpload(file.buffer.toString("base64"), uuid()),
+        ),
       );
 
       variant.images.push(...uploaded.map((i) => i.url));
@@ -256,7 +260,6 @@ exports.updateVariant = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 exports.deleteVariant = async (req, res) => {
   try {
@@ -297,8 +300,6 @@ exports.deleteVariant = async (req, res) => {
   }
 };
 
-
-
 exports.getProductWithVariant = async (req, res) => {
   try {
     const { productId, variantId } = req.params;
@@ -312,7 +313,7 @@ exports.getProductWithVariant = async (req, res) => {
         subcategory: 1,
         colors: 1,
         "variants.$": 1,
-      }
+      },
     );
 
     if (!product) {
@@ -346,9 +347,12 @@ exports.addSizeToVariant = async (req, res) => {
     const variant = product.variants.id(variantId);
     if (!variant) return res.status(404).json({ error: "Variant not found" });
 
-    const exists = variant.sizes.some(
-      (s) => s.size === size.toUpperCase()
-    );
+  const normalizedSize =
+  typeof size === "string" ? size.toUpperCase() : size;
+
+const exists = variant.sizes.some(
+  (s) => String(s.size).toUpperCase() === String(normalizedSize)
+);
 
     if (exists) {
       return res.status(400).json({
@@ -374,7 +378,3 @@ exports.addSizeToVariant = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
-
-
-

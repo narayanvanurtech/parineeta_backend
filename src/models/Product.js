@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 
-
 const sizeSchema = new mongoose.Schema(
   {
     size: {
@@ -9,7 +8,7 @@ const sizeSchema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
-
+   
     stock: {
       type: Number,
       required: true,
@@ -32,10 +31,8 @@ const sizeSchema = new mongoose.Schema(
     _id: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  }
+  },
 );
-
-
 
 const variantSchema = new mongoose.Schema(
   {
@@ -56,9 +53,8 @@ const variantSchema = new mongoose.Schema(
       default: [],
     },
   },
-  { _id: true }
+  { _id: true },
 );
-
 
 const productSchema = new mongoose.Schema(
   {
@@ -76,7 +72,9 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-
+ coreCategory: {
+      type: String,
+    },
     subcategory: {
       type: String,
       default: "",
@@ -97,9 +95,8 @@ const productSchema = new mongoose.Schema(
       default: [],
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
-
 
 productSchema.pre("save", function (next) {
   // derive colors from variants
@@ -110,14 +107,12 @@ productSchema.pre("save", function (next) {
   // calculate total stock
   this.stock = this.variants.reduce(
     (total, variant) =>
-      total +
-      variant.sizes.reduce((sum, size) => sum + size.stock, 0),
-    0
+      total + variant.sizes.reduce((sum, size) => sum + size.stock, 0),
+    0,
   );
 
   next();
 });
-
 
 sizeSchema.virtual("finalPrice").get(function () {
   return this.price - (this.price * this.discount) / 100;

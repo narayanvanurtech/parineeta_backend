@@ -44,7 +44,7 @@ const validateCreateCategory = (req, res, next) => {
 
 // Validate update category
 const validateUpdateCategory = (req, res, next) => {
-  const { name, description } = req.body;
+  const { name, description ,coreCategory} = req.body;
   const errors = [];
 
   // Check if at least one field is provided

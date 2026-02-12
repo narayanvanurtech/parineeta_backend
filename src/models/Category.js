@@ -4,20 +4,21 @@ const SubtitleSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true
+      required: true,
     },
     description: {
       type: String,
-      default: ""
+      default: "",
     },
     categoryId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
-      required: true
+      required: true,
     },
-    subtitles: [] // recursive
+  
+    subtitles: [], // recursive
   },
-  { _id: true }
+  { _id: true },
 );
 
 // recursion
@@ -27,15 +28,20 @@ const CategorySchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true
+      required: true,
     },
     description: {
       type: String,
-      default: ""
+      default: "",
+    }, 
+     coreCategory: {
+      type: String,
+      default: null,
     },
-    subtitles: [SubtitleSchema]
+
+    subtitles: [SubtitleSchema],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 module.exports = mongoose.model("Category", CategorySchema);

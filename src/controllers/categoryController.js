@@ -4,7 +4,7 @@ const { Category, Product } = require('../config/db');
 exports.getAllCategories = async (req, res) => {
   try {
     const categories = await Category.find({}).sort({ name: 1 });
-
+   
     res.json({
       message: 'Categories retrieved successfully',
       categories,
@@ -46,8 +46,7 @@ exports.getCategoryById = async (req, res) => {
 // Create category (Admin only)
 exports.createCategory = async (req, res) => {
   try {
-    const { name, description } = req.body;
-
+    const { name, description, coreCategory } = req.body;
     if (!name) {
       return res.status(400).json({ 
         error: 'Category name is required' 
@@ -66,9 +65,11 @@ exports.createCategory = async (req, res) => {
 
     const category = new Category({
       name: name.trim(),
-      description: description || ''
+      description: description || '',
+        coreCategory: coreCategory 
     });
 
+    console.log(category)
     await category.save();
 
     res.status(201).json({
@@ -87,13 +88,14 @@ exports.createCategory = async (req, res) => {
 // Update category (Admin only)
 exports.updateCategory = async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description,coreCategory } = req.body;
 
     const category = await Category.findByIdAndUpdate(
       req.params.id,
       { 
         name, 
         description,
+        coreCategory,
         updatedAt: new Date()
       },
       { new: true, runValidators: true }
