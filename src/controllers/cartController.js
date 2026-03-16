@@ -103,60 +103,62 @@ exports.getCart = async (req, res) => {
 };
 
 
-
-
-
-
-
-
-
-
-
 // Add item to cart
 exports.addToCart = async (req, res) => {
   try {
-    const { productId, variantId, quantity } = req.body;
+    const { productId, variantId, sizeId, quantity } = req.body;
     const userId = req.user._id;
-    
-    if (!productId || !variantId || !quantity) {
+
+    if (!productId || !variantId || !sizeId || !quantity) {
       return res.status(400).json({
-        error: "Product ID, Variant ID and quantity are required",
+        error: "Product ID, Variant ID, Size ID and quantity are required",
       });
     }
 
     const product = await Product.findById(productId);
+
     if (!product) {
       return res.status(404).json({ error: "Product not found" });
     }
 
     const variant = product.variants.id(variantId);
+
     if (!variant) {
       return res.status(404).json({ error: "Variant not found" });
     }
 
-    if (variant.stock < quantity) {
+    const size = variant.sizes.id(sizeId);
+
+    if (!size) {
+      return res.status(404).json({ error: "Size not found" });
+    }
+
+    if (size.stock < quantity) {
       return res.status(400).json({
         error: "Insufficient stock",
-        available: variant.stock,
+        available: size.stock,
       });
     }
 
+    // 🔹 Check if same product + variant + size already exists
     let cartItem = await Cart.findOne({
       userId,
       productId,
       variantId,
+      "size._id": sizeId,
     });
 
     if (cartItem) {
-      const newQty = cartItem.quantity + quantity;
+      const newQuantity = cartItem.quantity + quantity;
 
-      if (variant.stock < newQty) {
+      if (newQuantity > size.stock) {
         return res.status(400).json({
           error: "Insufficient stock for additional quantity",
+          available: size.stock,
         });
       }
 
-      cartItem.quantity = newQty;
+      cartItem.quantity = newQuantity;
       await cartItem.save();
     } else {
       cartItem = await Cart.create({
@@ -164,16 +166,31 @@ exports.addToCart = async (req, res) => {
         productId,
         variantId,
         quantity,
+        size: {
+          _id: size._id,
+          size: size.size,
+          price: size.price,
+          discount: size.discount,
+          finalPrice: size.finalPrice ?? size.price,
+          stock: size.stock,
+        },
       });
     }
 
+    const subtotal =
+      (cartItem.size.finalPrice ?? cartItem.size.price) * cartItem.quantity;
+
     res.json({
+      success: true,
       message: "Added to cart",
       cartItem,
+      subtotal,
     });
   } catch (error) {
-    console.error("Add to Cart Error:", error);
-    res.status(500).json({ error: "Failed to add product to cart" });
+    console.error("Add To Cart Error:", error);
+    res.status(500).json({
+      error: "Failed to add product to cart",
+    });
   }
 };
 

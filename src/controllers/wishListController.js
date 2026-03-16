@@ -9,7 +9,6 @@ const getWishlist = async (req, res) => {
     const wishlistItems = await Wishlist.find({ userId })
       .populate({
         path: 'productId',
-        // ❌ REMOVE field selection → get full product
       })
       .sort({ createdAt: -1 });
 
