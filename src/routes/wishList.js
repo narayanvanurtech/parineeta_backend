@@ -1,6 +1,6 @@
 ﻿const express = require("express");
 const router = express.Router();
-const wishlistController = require("../controllers/wishlistController");
+const wishlistController = require("../controllers/wishListController");
 const auth = require("../middleware/auth");
 
 console.log("✅ Wishlist routes loading - fixed version");

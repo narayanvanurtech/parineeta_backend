@@ -4,7 +4,7 @@ const Category = require('../models/Category');
 const Cart = require('../models/Cart');
 const Order = require('../models/Order');
 const Address = require('../models/Address');
-const Wishlist = require('../models/Wishlist');
+const Wishlist = require('../models/WishList');
 const Payment = require('../models/Payment');
 const Blogs = require('../models/Blog')
 
