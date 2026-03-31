@@ -4,6 +4,7 @@ const { generateUserToken } = require('../middleware/auth');
 const { generateAdminToken } = require('../middleware/admin');
 const crypto = require('crypto');
 const EmailService = require('../services/emailService');
+const { OAuth2Client } = require('google-auth-library');
 
 // Unified Login
 exports.unifiedLogin = async (req, res) => {
@@ -292,6 +293,8 @@ exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
     
+    console.log("email ===>>",email)
+
     console.log('=== ðŸ” FORGOT PASSWORD DEBUG START ===');
     console.log('1. ðŸ“§ Request received for email:', email);
     
@@ -462,3 +465,76 @@ exports.verifyResetToken = async (req, res) => {
 
 
 
+
+
+
+const googleClient = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.GOOGLE_REDIRECT_URI
+);
+
+exports.googleCallback = async (req, res) => {
+  try {
+    const { code } = req.body;
+
+    if (!code) {
+      return res.status(400).json({ error: 'Authorization code is required' });
+    }
+
+    // Exchange code for tokens
+    const { tokens } = await googleClient.getToken(code);
+    googleClient.setCredentials(tokens);
+
+    // Verify the ID token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, given_name, family_name, picture, sub: googleId } = payload;
+
+    // Find or create user
+    let user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      user = await User.create({
+        email: email.toLowerCase(),
+        firstName: given_name,
+        lastName: family_name || '',
+        avatar: picture,
+        googleId,
+        phone: '',
+        isVerified: true,
+        password: crypto.randomBytes(32).toString('hex'), // random password
+        role: 'customer',
+      });
+      console.log('✅ New Google user created:', email);
+    } else {
+      // Update Google info on existing user
+      user.googleId = googleId;
+      if (picture) user.avatar = picture;
+      await user.save();
+      console.log('✅ Existing user logged in via Google:', email);
+    }
+
+    // Generate JWT (reuse your existing function)
+    const token = generateUserToken(user._id.toString());
+
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
+    res.json({
+      message: 'Google login successful',
+      token,
+      user: userResponse,
+      loginType: 'google',
+      role: user.role,
+    });
+
+  } catch (error) {
+    console.error('❌ Google callback error:', error);
+    res.status(500).json({ error: 'Google authentication failed' });
+  }
+};

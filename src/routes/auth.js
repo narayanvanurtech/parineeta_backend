@@ -11,6 +11,7 @@ router.post("/login", authController.unifiedLogin);
 router.post("/forgot-password", authController.forgotPassword);
 router.post("/reset-password/:token", authController.resetPassword);
 router.get("/verify-reset-token/:token", authController.verifyResetToken);
+router.post("/google/callback", authController.googleCallback);
 
 // Protected routes
 router.get("/me", auth, authController.getProfile);
